@@ -10,14 +10,13 @@ _app_release_publish_github_release() {
         product_paths=(${(f)"$(_app_release_product_paths)"})
     fi
 
-    _app_release_release_notes_arguments
-    local -a notes_arguments=("${reply[@]}")
-
     if gh release view "$app_release_tag" --repo "$app_release_github_repository" > /dev/null 2>&1; then
         app_release_detail "the release $app_release_tag exists; replacing its assets"
         _app_release_run gh release upload "$app_release_tag" --repo "$app_release_github_repository" --clobber "${product_paths[@]}"
     else
-        local -a command=(gh release create "$app_release_tag" --repo "$app_release_github_repository" --verify-tag "${notes_arguments[@]}")
+        _app_release_release_notes_arguments
+        local -a command=(gh release create "$app_release_tag" --repo "$app_release_github_repository"
+            --title "$app_release_tag" --verify-tag "${reply[@]}")
         if [[ $app_release_is_prerelease == true ]]; then
             command+=(--prerelease)
         fi
@@ -26,24 +25,35 @@ _app_release_publish_github_release() {
     fi
 }
 
-# Sets reply to the gh options that carry the release notes: the file release_notes_path names, written
-# first by the release_compose_notes hook when it does not exist yet; or empty notes.
+# Sets reply to the gh options that carry the release notes:
+# - the file release_notes_path names, written first by the release_compose_notes hook when missing;
+# - otherwise, with release_notes_fallback=generated, the notes GitHub generates from the history;
+# - otherwise empty notes when no file was asked for, and a failure when the asked-for file is missing.
 _app_release_release_notes_arguments() {
-    reply=(--notes "")
-    if [[ -z $release_notes_path ]]; then
-        return 0
-    fi
-    _app_release_render_template "$release_notes_path"
-    local notes_path=${REPLY:a}
-    if [[ ! -f $notes_path ]] && (( $+functions[release_compose_notes] )); then
-        _app_release_call_hook release_compose_notes "$notes_path"
-    fi
-    if [[ ! -f $notes_path ]]; then
-        if [[ $_app_release_is_dry_run == true ]]; then
-            app_release_detail "dry run: the release notes $notes_path do not exist yet"
-        else
-            app_release_fail "release_notes_path: no release notes at $notes_path"
+    local notes_path=
+    if [[ -n $release_notes_path ]]; then
+        _app_release_render_template "$release_notes_path"
+        notes_path=${REPLY:a}
+        if [[ ! -f $notes_path ]] && (( $+functions[release_compose_notes] )); then
+            _app_release_call_hook release_compose_notes "$notes_path"
+        fi
+        if [[ -f $notes_path ]]; then
+            reply=(--notes-file "$notes_path")
+            return 0
         fi
     fi
-    reply=(--notes-file "$notes_path")
+    if [[ $release_notes_fallback == generated ]]; then
+        reply=(--generate-notes)
+        return 0
+    fi
+    if [[ -z $notes_path ]]; then
+        reply=(--notes "")
+        return 0
+    fi
+    if [[ $_app_release_is_dry_run == true ]]; then
+        app_release_detail "dry run: the release notes $notes_path do not exist yet"
+        reply=(--notes-file "$notes_path")
+        return 0
+    fi
+    app_release_fail "release_notes_path: no release notes at $notes_path"
 }

@@ -224,6 +224,7 @@ release_verify_export() {
 | `release_product_name` | `{name}-{version}-{build}.zip` | 占位符有 `{name}`（App 名）、`{version}`、`{build}`、`{tag}` |
 | `release_publishers` | 空 | 可选 `github-release`、`sparkle-appcast` |
 | `release_notes_path` | 无 | 发布说明文件，可用占位符，例如 `Changelogs/{tag}.md`；用作 GitHub Release 正文 |
+| `release_notes_fallback` | `none` | `generated`：没有说明文件时，用 GitHub 按提交历史生成的说明（1.1.0 起） |
 | `release_appcast_path` | 无 | 列了 `sparkle-appcast` 时必填 |
 | `release_appcast_arguments` | 空 | 追加给 `generate_appcast` 的参数，例如 RuntimeViewer 的 `--release-notes-url-prefix` |
 
@@ -559,3 +560,5 @@ jobs:
 | 2026-11-05 | 步骤 3 完成，XCOrganizer 的分支先不合并 | 用户同意在本机真做一次公证。公证配置名用 `notarytool-password`：FinderSidebarIconFix 与 RuntimeViewer 给同一团队用的就是它，`notarytool history` 确认可用。XCOrganizer 的 `Release.zsh` 钉 1.0.0，引擎发布前合进 main 会让那里的 `app-release` 拉不到引擎，所以合并放到步骤 4 之后。 |
 | 2026-11-05 | 步骤 4 完成，引擎 1.0.0 发布 | 用户同意建公开仓库并发布。功能分支快进合进 main 后推送；提案仍为 In Progress、不取号，编号等五个项目都迁完、正式收尾时再分配。 |
 | 2026-11-05 | 核实：Xcode 26 接受 `-IDEEnableNewPackagePIFBuilder=NO` | 前期调研里这一条原是推测。引擎 CI 的默认 Xcode 是 26.6，集成测试归档通用示例 App 时带着这个参数照常成功；示例没有 package，所以只证明参数本身无害。 |
+| 2026-11-05 | 引擎 1.1.0：新增 `release_notes_fallback`，新建 GitHub Release 时显式传 `--title <tag>` | 迁移 FinderSidebarIconFix 时发现它发版用 GitHub 自动生成的说明（`--generate-notes`），RuntimeViewer 在没给说明文件时也这样做，1.0.0 只会给空说明。按 API 演进策略，新增可选变量算 minor；默认值不变，已有行为不受影响。四个项目建 Release 时都把标题设为 tag，引擎照做。 |
+| 2026-11-05 | FinderSidebarIconFix 的 launchd plist 检查改为从 plist 本身推出服务名 | 旧脚本把 `Label` 与 build setting `INJECTION_SERVICE_NAME` 逐字比对；钩子在单独续跑某一段时拿不到 build settings。改为检查：`LaunchDaemons/` 下只有一个 plist、文件名就是 `<Label>.plist`、`Label` 不以 `.debug` 结尾、`MachServices` 打开了它、`BundleProgram` 指向的文件存在。当初那道检查要防的「Release 包里装的是 Debug 服务名」仍然拦得住。 |

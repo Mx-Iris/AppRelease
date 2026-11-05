@@ -16,6 +16,7 @@ typeset -g release_version_tag_match=exact
 typeset -g release_product_name='{name}-{version}-{build}.zip'
 typeset -ga release_publishers=()
 typeset -g release_notes_path=
+typeset -g release_notes_fallback=none
 typeset -g release_appcast_path=
 typeset -ga release_appcast_arguments=()
 
@@ -56,6 +57,10 @@ _app_release_load_configuration() {
     case $release_version_tag_match in
         (exact|base) ;;
         (*) app_release_fail "release_version_tag_match must be exact or base, not '$release_version_tag_match'" ;;
+    esac
+    case $release_notes_fallback in
+        (none|generated) ;;
+        (*) app_release_fail "release_notes_fallback must be none or generated, not '$release_notes_fallback'" ;;
     esac
     [[ $release_product_name == *.zip ]] || app_release_fail "release_product_name must end in .zip: this version of AppRelease makes zip archives only"
     [[ $release_product_name != */* ]] || app_release_fail "release_product_name is a file name, not a path: '$release_product_name'"

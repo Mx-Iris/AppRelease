@@ -70,6 +70,7 @@ app-release product --publish   # tag, GitHub Release, appcast
 | `release_product_name` | `{name}-{version}-{build}.zip` | Placeholders `{name}` `{version}` `{build}` `{tag}` |
 | `release_publishers` | none | `github-release`, `sparkle-appcast` |
 | `release_notes_path` | none | Release notes file, with placeholders, for the GitHub Release |
+| `release_notes_fallback` | `none` | `generated`: when there is no notes file, GitHub writes the notes from the history (since 1.1.0) |
 | `release_appcast_path` | none | Required with `sparkle-appcast` |
 | `release_appcast_arguments` | none | Extra `generate_appcast` arguments |
 
