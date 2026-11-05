@@ -1,0 +1,18 @@
+#!/bin/zsh -f
+# Fake gh for the tests: signed in, origin is FAKE_GITHUB_REPOSITORY, and no release exists yet.
+# Anything else fails.
+case "${1:-} ${2:-}" in
+    ("auth status")
+        exit 0
+        ;;
+    ("repo view")
+        print -r -- "${FAKE_GITHUB_REPOSITORY:-example/SampleApp}"
+        exit 0
+        ;;
+    ("release view")
+        print -u2 -r -- "release not found"
+        exit 1
+        ;;
+esac
+print -u2 -r -- "fake gh: nothing configured for: $*"
+exit 70

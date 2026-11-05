@@ -4,4 +4,4 @@
 
 | # | 标题 | 状态 |
 |---|------|------|
-| draft | [通用 Mac 发版引擎 AppRelease](draft-generic-mac-release-engine.md) | Accepted |
+| draft | [通用 Mac 发版引擎 AppRelease](draft-generic-mac-release-engine.md) | In Progress |

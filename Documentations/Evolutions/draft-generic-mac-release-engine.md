@@ -1,6 +1,6 @@
 # Draft - 通用 Mac 发版引擎 AppRelease
 
-- **状态**: Accepted
+- **状态**: In Progress
 - **作者**: JH
 - **创建日期**: 2026-11-05
 - **最后更新**: 2026-11-05
@@ -166,7 +166,8 @@ app-release archive                    # every stage can run alone, reading the 
 app-release export
 app-release notary
 app-release product [--publish]
-app-release all [--from <stage>] [--publish]
+app-release all [--from <stage>] [--to <stage>] [--publish]
+app-release target --to <stage>        # check only what the stages up to <stage> need
 
 # Options shared by every stage:
 #   --version-tag <tag>           e.g. v1.4.0 or v3.0.0-beta.5; checked against the project's version
@@ -209,6 +210,7 @@ release_verify_export() {
 | `release_engine_version` | 必填 | 要运行的 AppRelease 确切版本 |
 | `release_workspace` / `release_project` | 二选一必填 | 归档用的 workspace 或 project |
 | `release_scheme` | 必填 | |
+| `release_application_target` | scheme 里唯一的 App target | scheme 构建多个 App 时指定发哪一个 |
 | `release_configuration` | `Release` | |
 | `release_destination` | `generic/platform=macOS` | 需要特殊切片（例如 arm64e）的项目可以改 |
 | `release_architectures` | scheme 的 `ARCHS` | `archive` 段用 `lipo -archs` 核对主可执行文件；含 `x86_64` 时归档带上 `-IDEEnableNewPackagePIFBuilder=NO` |
@@ -223,6 +225,7 @@ release_verify_export() {
 | `release_publishers` | 空 | 可选 `github-release`、`sparkle-appcast` |
 | `release_notes_path` | 无 | 发布说明文件，可用占位符，例如 `Changelogs/{tag}.md`；用作 GitHub Release 正文 |
 | `release_appcast_path` | 无 | 列了 `sparkle-appcast` 时必填 |
+| `release_appcast_arguments` | 空 | 追加给 `generate_appcast` 的参数，例如 RuntimeViewer 的 `--release-notes-url-prefix` |
 
 **钩子**（都可选，定义了才调用；返回非零即视为验收失败）
 
@@ -480,11 +483,13 @@ jobs:
 
 1. **引擎骨架**：启动器、`Engine.zsh`、运行目录与 manifest、日志、`--dry-run`、`target` 段。
    验收：示例 App 上 `app-release target` 打出正确的计划；单元测试通过。
-2. **其余四段（只做 App + zip）**：xcodebuild 入口、归档类型与 `lipo` 检查、导出校验、公证与续等、staple 重试、`spctl` 来源核对、产物名模板、dSYM、`SHA256SUMS`、CI 凭据模式、两种发布方式。
+   进度：完成，与步骤 2 一起验收。
+2. **其余四段（只做 App + zip）**：xcodebuild 入口、归档类型与 `lipo` 检查、导出校验、公证与续等、staple 重试、`spctl` 来源核对、产物名模板、dSYM、`SHA256SUMS`、CI 凭据模式、两种发布方式；README、LICENSE、引擎 CI 一并写好。
    验收：示例 App 走完 `target` 和 `archive`；两个反例都变红。
+   进度：完成。`Tests/Run.zsh` 的 45 个命令行测试全部通过；`--integration` 的 3 个测试在本机（Xcode 27.2）真的归档了示例 App，Generic 归档与缺架构两个反例都被拦下。
 3. **迁移 XCOrganizer**（本机，第一批）：写 `Release.zsh`，用 `APP_RELEASE_ENGINE_DIRECTORY` 指向引擎工作副本，在本机做真实的签名、公证、staple。
    验收：与 `BuildNotarizedApp.sh` 的产物逐项比对（签名者、entitlements、Info.plist、`spctl` 结果）一致。删除 `BuildNotarizedApp.sh`，更新 `CLAUDE.md`；XCOrganizer 那份 In Progress 的提案改为 Withdrawn 并链接本提案。
-4. **发布引擎 1.0.0**：在 GitHub 创建公开仓库 `Mx-Iris/AppRelease`（对外动作，执行前再次确认），补上 README、LICENSE、引擎 CI，打 tag `1.0.0`；两台 Mac 各运行一次 `Install app-release.command`。
+4. **发布引擎 1.0.0**：在 GitHub 创建公开仓库 `Mx-Iris/AppRelease`（对外动作，执行前再次确认），推送并确认引擎 CI 通过，打 tag `1.0.0`；两台 Mac 各运行一次 `Install app-release.command`。
    验收：XCOrganizer 钉 `1.0.0`，不设 `APP_RELEASE_ENGINE_DIRECTORY`，再跑一次 `app-release target`。
 5. **迁移 FinderSidebarIconFix**（本机，第二批）：arm64e 切片与 launchd plist 检查放进钩子，`release_publishers=(github-release)`，产物名保持 `FinderSidebarIconFix-macOS.zip`。
    验收同步骤 3；删除 `ArchiveScript.sh`，更新文档。
@@ -534,3 +539,18 @@ jobs:
 | 2026-11-05 | 确认未经提问采用的做法 | 钩子是 `Release.zsh` 里的函数；xcodebuild 统一入口；公证只认 `status`；ssh 会话无 CI 凭据即拒绝；输出根默认 `build/AppRelease`；secrets 不改名；预发布按 tag 后缀判定；要求 macOS 15+；MIT 许可证；本地目录 `Personal/Scripts/AppRelease`。用户确认。 |
 | 2026-11-05 | 成稿时按调研补入的设计细节，待审阅 | 都来自对现有脚本的核查：版本号读不到 build setting 时回退到 Info.plist 字面值，并加 `release_version_tag_match=base`（LyricsX）；产物名用模板，保留各项目现有文件名（下载地址依赖它）；默认不覆盖归档的签名设置（LyricsX `build.sh:41-47`）；`release_export_options_path` 与描述文件环境变量（LyricsX）；`product` 段解开 zip 复检。 |
 | 2026-11-05 | 用户批准，开始实现 | 状态改为 Accepted，实现放在 `feature/generic-mac-release-engine`。仓库还没有远端，提案只提交在本地；GitHub 仓库按落地步骤 4 另行确认后再建。 |
+| 2026-11-05 | 状态改为 In Progress；步骤 1、2 的代码写完，先交审阅 | 按全局规则，自己写的脚本先给用户审阅再运行；审阅前只做了 `zsh -n` 语法检查，测试还没跑。 |
+| 2026-11-05 | 增加 `--to <stage>` | 与 `--from` 对称；`--skip-notarization` 即 `--to export`；`target --to <stage>` 只预检到该段。测试与「只验证前几段」都需要它，而且不用证书。 |
+| 2026-11-05 | 增加 `release_application_target`、`release_appcast_arguments` | 前者用于 scheme 构建多个 App 的项目；后者让 RuntimeViewer 继续传 `--release-notes-url-prefix`。这个参数的语义没有核实，所以引擎不默认传。 |
+| 2026-11-05 | 运行目录用 tag 的版本加 build 命名，例如 `1.9.0-beta.5-10900105` | LyricsX 的工程版本不带后缀，用 tag 的版本才能区分同一版本的几个预发布。 |
+| 2026-11-05 | 同一版本再跑 `target` 时，旧运行目录改名为 `.replaced-<时间>` 保留 | 旧目录可能是已经发出去的版本，不能删。 |
+| 2026-11-05 | 公证先 `submit --no-wait` 记下 id，再 `wait`，以 `notarytool info` 的 status 为准 | 记下 id 在前，等待被打断也能续等；`wait` 的退出码不作结论。 |
+| 2026-11-05 | CI 模式下临时钥匙串在 archive 之前建好 | XCOrganizer、LyricsX 在归档时就用 Developer ID 签名，等到 export 再建就晚了。 |
+| 2026-11-05 | 钩子在子 shell 里运行，带 err_exit | 钩子里任何一条命令失败都算钩子失败；代价是钩子改不了引擎的变量，结果经 `app_release_add_product` 或文件传回。 |
+| 2026-11-05 | 描述文件同时装进 `~/Library/MobileDevice/Provisioning Profiles` 与 `~/Library/Developer/Xcode/UserData/Provisioning Profiles`，退出时都删 | Xcode 新版读哪一处没有核实，两处都放最稳。 |
+| 2026-11-05 | 某段重跑时，manifest 里它之后各段的记录作废；notary 保留 submission id | 否则重新导出后，续等的会是旧 App 的公证。 |
+| 2026-11-05 | 归档改动了已跟踪的文件（比如 Package.resolved）时只警告 | 直接失败可能被 Xcode 改写格式之类的无害变化误伤；先观察迁移中的实际情况再定。 |
+| 2026-11-05 | `--publish` 时 `release_publishers` 为空则只补打并推送 tag；`sparkle-appcast` 要求同时列 `github-release` | appcast 里的下载地址指向 GitHub Release。 |
+| 2026-11-05 | README、LICENSE、引擎 CI 随步骤 2 写 | 文档与代码同批落地；步骤 4 只剩建仓库、推送、打 tag、安装。 |
+| 2026-11-05 | 测试只从 `app-release` 命令行驱动；xcodebuild、security、xcrun、gh 用 PATH 上的假工具代替 | 项目怎么用就怎么测，替身只放在系统边界；真 xcodebuild 的归档测试放进 `--integration`。用户确认了这个测试入口。 |
+| 2026-11-05 | 步骤 1、2 完成 | 用户审阅后同意运行测试：45 个命令行测试与 3 个集成测试全部通过。 |

@@ -1,0 +1,29 @@
+[
+  {
+    "action" : "build",
+    "target" : "SampleApp",
+    "buildSettings" : {
+      "ARCHS" : "arm64 x86_64",
+      "CURRENT_PROJECT_VERSION" : "45",
+      "DEVELOPMENT_TEAM" : "TEAMID1234",
+      "ENABLE_HARDENED_RUNTIME" : "YES",
+      "EXECUTABLE_NAME" : "SampleApp",
+      "FULL_PRODUCT_NAME" : "SampleApp.app",
+      "GENERATE_INFOPLIST_FILE" : "YES",
+      "MARKETING_VERSION" : "1.2.3",
+      "PRODUCT_BUNDLE_IDENTIFIER" : "com.example.AppRelease.SampleApp",
+      "PRODUCT_NAME" : "SampleApp",
+      "PRODUCT_TYPE" : "com.apple.product-type.application",
+      "SRCROOT" : "replaced by the tests"
+    }
+  },
+  {
+    "action" : "build",
+    "target" : "SampleTool",
+    "buildSettings" : {
+      "FULL_PRODUCT_NAME" : "SampleTool",
+      "PRODUCT_NAME" : "SampleTool",
+      "PRODUCT_TYPE" : "com.apple.product-type.tool"
+    }
+  }
+]

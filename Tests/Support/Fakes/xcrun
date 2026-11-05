@@ -1,0 +1,13 @@
+#!/bin/zsh -f
+# Fake xcrun for the tests. notarytool history accepts the credentials when
+# FAKE_NOTARY_ACCEPTS_CREDENTIALS is 1 and refuses them otherwise. Anything else fails.
+if [[ ${1:-} == notarytool && ${2:-} == history ]]; then
+    if [[ ${FAKE_NOTARY_ACCEPTS_CREDENTIALS:-} == 1 ]]; then
+        print -r -- '{"history":[]}'
+        exit 0
+    fi
+    print -u2 -r -- "Error: HTTP status code: 401. Unable to authenticate."
+    exit 69
+fi
+print -u2 -r -- "fake xcrun: nothing configured for: $*"
+exit 70

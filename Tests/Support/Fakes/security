@@ -1,0 +1,14 @@
+#!/bin/zsh -f
+# Fake security for the tests. find-identity lists the one identity named by FAKE_SECURITY_IDENTITY,
+# or none. Anything else fails.
+if [[ ${1:-} == find-identity ]]; then
+    if [[ -n ${FAKE_SECURITY_IDENTITY:-} ]]; then
+        print -r -- "  1) 0123456789ABCDEF0123456789ABCDEF01234567 \"$FAKE_SECURITY_IDENTITY\""
+        print -r -- "     1 valid identities found"
+    else
+        print -r -- "     0 valid identities found"
+    fi
+    exit 0
+fi
+print -u2 -r -- "fake security: nothing configured for: $*"
+exit 70

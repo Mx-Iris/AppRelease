@@ -1,0 +1,18 @@
+#!/bin/zsh -f
+# Fake xcodebuild for the tests. Answers -version, and -showBuildSettings with the JSON file at
+# FAKE_XCODEBUILD_SETTINGS_PATH. Anything else fails, so a passing test also shows nothing else was asked.
+if [[ ${1:-} == -version ]]; then
+    print -r -- "Xcode 99.0"
+    print -r -- "Build version 99A100"
+    exit 0
+fi
+if (( ${argv[(Ie)-showBuildSettings]} )); then
+    if [[ -z ${FAKE_XCODEBUILD_SETTINGS_PATH:-} ]]; then
+        print -u2 -r -- "fake xcodebuild: FAKE_XCODEBUILD_SETTINGS_PATH is not set"
+        exit 70
+    fi
+    cat "$FAKE_XCODEBUILD_SETTINGS_PATH"
+    exit 0
+fi
+print -u2 -r -- "fake xcodebuild: nothing configured for: $*"
+exit 70

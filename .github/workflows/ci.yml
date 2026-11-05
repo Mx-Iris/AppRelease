@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # No signing certificate or notary credential lives in this repository: the tests archive an ad hoc
+    # signed sample app and fake the tools that would need them.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        env:
+          APP_RELEASE_TEST_DERIVED_DATA_PATH: ${{ runner.temp }}/DerivedData
+        run: zsh -f Tests/Run.zsh --integration

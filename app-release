@@ -1,0 +1,115 @@
+#!/bin/zsh -f
+# app-release: runs exactly the AppRelease version that the project pins in its Release.zsh.
+#
+# The engine is Sources/Engine.zsh in a checkout of github.com/Mx-Iris/AppRelease. Which checkout runs:
+#   1. APP_RELEASE_ENGINE_DIRECTORY, when set. For working on the engine itself; prints a warning.
+#   2. The checkout this launcher sits in, when it is a clean checkout of the pinned tag (CI does this).
+#   3. <cache>/<version>, cloned from the pinned tag the first time it is needed.
+#
+# `app-release --install` copies this launcher into ~/.local/bin. It is a copy, not a symlink, so the
+# installed launcher never runs a working tree in place of the pinned version.
+#
+# Environment for tests and mirrors: APP_RELEASE_REPOSITORY_URL, APP_RELEASE_CACHE_DIRECTORY.
+emulate -R zsh
+setopt err_exit no_unset pipe_fail
+
+readonly launcher_path=${0:A}
+readonly launcher_directory=${launcher_path:h}
+readonly repository_url=${APP_RELEASE_REPOSITORY_URL:-https://github.com/Mx-Iris/AppRelease.git}
+readonly cache_directory=${APP_RELEASE_CACHE_DIRECTORY:-$HOME/Library/Caches/AppRelease}
+# Accepts release_engine_version=1.2.3, optionally quoted, optionally followed by a comment.
+readonly pin_pattern=$'^release_engine_version=[\'"]?([0-9]+\\.[0-9]+\\.[0-9]+)[\'"]?([[:space:]]+#.*)?$'
+
+fail() {
+    print -u2 -r -- "app-release: $1"
+    exit ${2:-1}
+}
+
+install_launcher() {
+    local install_directory=$HOME/.local/bin
+    mkdir -p "$install_directory"
+    cp "$launcher_path" "$install_directory/app-release.installing"
+    chmod 755 "$install_directory/app-release.installing"
+    mv -f "$install_directory/app-release.installing" "$install_directory/app-release"
+    print -r -- "Installed $install_directory/app-release"
+    if [[ :$PATH: != *:$install_directory:* ]]; then
+        print -r -- "Note: $install_directory is not on PATH in this shell."
+    fi
+}
+
+# Succeeds when directory holds an unmodified checkout of the tag named version.
+is_clean_checkout_of() {
+    local directory=$1 version=$2
+    [[ -f $directory/Sources/Version && -f $directory/Sources/Engine.zsh ]] || return 1
+    [[ $(<$directory/Sources/Version) == $version ]] || return 1
+    local tag_at_head
+    tag_at_head=$(git -C "$directory" describe --tags --exact-match HEAD 2> /dev/null) || return 1
+    [[ $tag_at_head == $version ]] || return 1
+    [[ -z $(git -C "$directory" status --porcelain 2> /dev/null) ]]
+}
+
+fetch_engine() {
+    local version=$1 destination=$2
+    print -u2 -r -- "app-release: fetching AppRelease $version from $repository_url"
+    mkdir -p "${destination:h}"
+    local staging_directory
+    staging_directory=$(mktemp -d "${destination:h}/.fetching-$version.XXXXXX")
+    if ! git clone --quiet --depth 1 --branch "$version" "$repository_url" "$staging_directory/AppRelease" 2> "$staging_directory/clone.log"; then
+        cat "$staging_directory/clone.log" >&2
+        rm -rf "$staging_directory"
+        fail "could not fetch the tag $version of $repository_url"
+    fi
+    # Another launch may have fetched the same version meanwhile; keep whichever finished first.
+    if is_clean_checkout_of "$destination" "$version"; then
+        rm -rf "$staging_directory"
+        return 0
+    fi
+    if [[ -e $destination ]]; then
+        rm -rf "$destination"
+    fi
+    mv "$staging_directory/AppRelease" "$destination"
+    rm -rf "$staging_directory"
+}
+
+if [[ ${1:-} == --install ]]; then
+    install_launcher
+    exit 0
+fi
+
+# The project is the nearest directory, from here upwards, that holds a Release.zsh.
+project_directory=${${APP_RELEASE_PROJECT_DIRECTORY:-$PWD}:A}
+while [[ ! -f $project_directory/Release.zsh ]]; do
+    if [[ $project_directory == / ]]; then
+        # Help and the version need no project when this launcher sits in an engine checkout.
+        if [[ ${1:-} == (-h|--help|help|version) && -f $launcher_directory/Sources/Engine.zsh ]]; then
+            exec /bin/zsh -f "$launcher_directory/Sources/Engine.zsh" "$@"
+        fi
+        fail "no Release.zsh in ${PWD} or any directory above it" 64
+    fi
+    project_directory=${project_directory:h}
+done
+
+engine_version=
+for line in "${(@f)$(<$project_directory/Release.zsh)}"; do
+    if [[ $line =~ $pin_pattern ]]; then
+        engine_version=$match[1]
+        break
+    fi
+done
+[[ -n $engine_version ]] || fail "$project_directory/Release.zsh does not pin the engine; add a line like release_engine_version=1.0.0" 64
+
+if [[ -n ${APP_RELEASE_ENGINE_DIRECTORY:-} ]]; then
+    engine_directory=${APP_RELEASE_ENGINE_DIRECTORY:A}
+    print -u2 -r -- "app-release: warning: running the engine in $engine_directory instead of the pinned $engine_version"
+elif is_clean_checkout_of "$launcher_directory" "$engine_version"; then
+    engine_directory=$launcher_directory
+else
+    engine_directory=$cache_directory/$engine_version
+    if ! is_clean_checkout_of "$engine_directory" "$engine_version"; then
+        fetch_engine "$engine_version" "$engine_directory"
+    fi
+fi
+[[ -f $engine_directory/Sources/Engine.zsh ]] || fail "no engine at $engine_directory"
+
+export APP_RELEASE_PROJECT_DIRECTORY=$project_directory
+exec /bin/zsh -f "$engine_directory/Sources/Engine.zsh" "$@"
