@@ -489,6 +489,7 @@ jobs:
    进度：完成。`Tests/Run.zsh` 的 45 个命令行测试全部通过；`--integration` 的 3 个测试在本机（Xcode 27.2）真的归档了示例 App，Generic 归档与缺架构两个反例都被拦下。
 3. **迁移 XCOrganizer**（本机，第一批）：写 `Release.zsh`，用 `APP_RELEASE_ENGINE_DIRECTORY` 指向引擎工作副本，在本机做真实的签名、公证、staple。
    验收：与 `BuildNotarizedApp.sh` 的产物逐项比对（签名者、entitlements、Info.plist、`spctl` 结果）一致。删除 `BuildNotarizedApp.sh`，更新 `CLAUDE.md`；XCOrganizer 那份 In Progress 的提案改为 Withdrawn 并链接本提案。
+   进度：完成，在 XCOrganizer 的 `feature/adopt-app-release` 上，等步骤 4 发布引擎后再合并（它钉的 1.0.0 那时才拉得到）。本机完整跑通一次：通用归档、Developer ID 导出、内嵌辅助程序检查、公证 Accepted、装订、Gatekeeper 认作 Notarized Developer ID、zip 解开复检。旧脚本用 `--skip-notarization` 出了一份对照：主程序签名、entitlements、Info.plist、架构、4 个内嵌代码的签名都相同，文件只多一个装订进去的票据 `Contents/CodeResources`。
 4. **发布引擎 1.0.0**：在 GitHub 创建公开仓库 `Mx-Iris/AppRelease`（对外动作，执行前再次确认），推送并确认引擎 CI 通过，打 tag `1.0.0`；两台 Mac 各运行一次 `Install app-release.command`。
    验收：XCOrganizer 钉 `1.0.0`，不设 `APP_RELEASE_ENGINE_DIRECTORY`，再跑一次 `app-release target`。
 5. **迁移 FinderSidebarIconFix**（本机，第二批）：arm64e 切片与 launchd plist 检查放进钩子，`release_publishers=(github-release)`，产物名保持 `FinderSidebarIconFix-macOS.zip`。
@@ -554,3 +555,4 @@ jobs:
 | 2026-11-05 | README、LICENSE、引擎 CI 随步骤 2 写 | 文档与代码同批落地；步骤 4 只剩建仓库、推送、打 tag、安装。 |
 | 2026-11-05 | 测试只从 `app-release` 命令行驱动；xcodebuild、security、xcrun、gh 用 PATH 上的假工具代替 | 项目怎么用就怎么测，替身只放在系统边界；真 xcodebuild 的归档测试放进 `--integration`。用户确认了这个测试入口。 |
 | 2026-11-05 | 步骤 1、2 完成 | 用户审阅后同意运行测试：45 个命令行测试与 3 个集成测试全部通过。 |
+| 2026-11-05 | 步骤 3 完成，XCOrganizer 的分支先不合并 | 用户同意在本机真做一次公证。公证配置名用 `notarytool-password`：FinderSidebarIconFix 与 RuntimeViewer 给同一团队用的就是它，`notarytool history` 确认可用。XCOrganizer 的 `Release.zsh` 钉 1.0.0，引擎发布前合进 main 会让那里的 `app-release` 拉不到引擎，所以合并放到步骤 4 之后。 |
