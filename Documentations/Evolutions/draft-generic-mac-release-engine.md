@@ -492,6 +492,7 @@ jobs:
    进度：完成，在 XCOrganizer 的 `feature/adopt-app-release` 上，等步骤 4 发布引擎后再合并（它钉的 1.0.0 那时才拉得到）。本机完整跑通一次：通用归档、Developer ID 导出、内嵌辅助程序检查、公证 Accepted、装订、Gatekeeper 认作 Notarized Developer ID、zip 解开复检。旧脚本用 `--skip-notarization` 出了一份对照：主程序签名、entitlements、Info.plist、架构、4 个内嵌代码的签名都相同，文件只多一个装订进去的票据 `Contents/CodeResources`。
 4. **发布引擎 1.0.0**：在 GitHub 创建公开仓库 `Mx-Iris/AppRelease`（对外动作，执行前再次确认），推送并确认引擎 CI 通过，打 tag `1.0.0`；两台 Mac 各运行一次 `Install app-release.command`。
    验收：XCOrganizer 钉 `1.0.0`，不设 `APP_RELEASE_ENGINE_DIRECTORY`，再跑一次 `app-release target`。
+   进度：完成。公开仓库 https://github.com/Mx-Iris/AppRelease ，引擎 CI（`macos-26-arm64`，默认 Xcode 26.6）48 个测试全部通过，tag `1.0.0` 已推送；两台 Mac 都装好了启动器（Ultra 经 ssh 克隆到同一路径后安装）。XCOrganizer 用装好的启动器、不设本地引擎目录，从 GitHub 拉下 1.0.0 跑通了 `target` 预检；它的功能分支已在本地合进 main，未推送。
 5. **迁移 FinderSidebarIconFix**（本机，第二批）：arm64e 切片与 launchd plist 检查放进钩子，`release_publishers=(github-release)`，产物名保持 `FinderSidebarIconFix-macOS.zip`。
    验收同步骤 3；删除 `ArchiveScript.sh`，更新文档。
 6. **迁移 StarLight**（CI，第三批里最简单的一个）：`release.yml` 换成引擎片段，映射 secrets，产物名保持 `StarLight-{tag}.zip`。
@@ -556,3 +557,5 @@ jobs:
 | 2026-11-05 | 测试只从 `app-release` 命令行驱动；xcodebuild、security、xcrun、gh 用 PATH 上的假工具代替 | 项目怎么用就怎么测，替身只放在系统边界；真 xcodebuild 的归档测试放进 `--integration`。用户确认了这个测试入口。 |
 | 2026-11-05 | 步骤 1、2 完成 | 用户审阅后同意运行测试：45 个命令行测试与 3 个集成测试全部通过。 |
 | 2026-11-05 | 步骤 3 完成，XCOrganizer 的分支先不合并 | 用户同意在本机真做一次公证。公证配置名用 `notarytool-password`：FinderSidebarIconFix 与 RuntimeViewer 给同一团队用的就是它，`notarytool history` 确认可用。XCOrganizer 的 `Release.zsh` 钉 1.0.0，引擎发布前合进 main 会让那里的 `app-release` 拉不到引擎，所以合并放到步骤 4 之后。 |
+| 2026-11-05 | 步骤 4 完成，引擎 1.0.0 发布 | 用户同意建公开仓库并发布。功能分支快进合进 main 后推送；提案仍为 In Progress、不取号，编号等五个项目都迁完、正式收尾时再分配。 |
+| 2026-11-05 | 核实：Xcode 26 接受 `-IDEEnableNewPackagePIFBuilder=NO` | 前期调研里这一条原是推测。引擎 CI 的默认 Xcode 是 26.6，集成测试归档通用示例 App 时带着这个参数照常成功；示例没有 package，所以只证明参数本身无害。 |
