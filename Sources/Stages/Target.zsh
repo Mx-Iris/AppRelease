@@ -188,6 +188,9 @@ _app_release_preflight_publish() {
     if [[ -n $release_appcast_path ]]; then
         [[ -d ${release_appcast_path:a:h} ]] || app_release_fail "release_appcast_path: the directory ${release_appcast_path:a:h} does not exist"
     fi
+    if (( ${release_publishers[(Ie)github-release]} )); then
+        _app_release_preflight_release_notes
+    fi
 }
 
 # Starts the run directory. A run of the same version and build that is already there is kept aside,

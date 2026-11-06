@@ -1,6 +1,6 @@
 #!/bin/zsh -f
-# Fake gh for the tests: signed in, origin is FAKE_GITHUB_REPOSITORY, and no release exists yet.
-# Anything else fails.
+# Fake gh for the tests: signed in, origin is FAKE_GITHUB_REPOSITORY, and no release exists yet unless
+# FAKE_GITHUB_RELEASE_EXISTS=1. Anything else fails.
 case "${1:-} ${2:-}" in
     ("auth status")
         exit 0
@@ -10,6 +10,9 @@ case "${1:-} ${2:-}" in
         exit 0
         ;;
     ("release view")
+        if [[ ${FAKE_GITHUB_RELEASE_EXISTS:-0} == 1 ]]; then
+            exit 0
+        fi
         print -u2 -r -- "release not found"
         exit 1
         ;;

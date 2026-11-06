@@ -1,4 +1,5 @@
-# What a dry run of --publish hands to gh for the GitHub Release: title and release notes.
+# What a dry run of --publish hands to gh for the GitHub Release: title and release notes, and how
+# early a release that would have no notes stops.
 
 # A sample project that can publish to a GitHub Release, with any further Release.zsh lines given.
 make_publishing_project() {
@@ -49,6 +50,47 @@ test_a_missing_notes_file_falls_back_to_generated_notes() {
     run_app_release all --dry-run --publish
     expect_success
     expect_output_containing "--generate-notes"
+}
+
+test_a_missing_notes_file_stops_the_release_before_archiving() {
+    make_publishing_project "release_notes_path='Changelogs/{tag}.md'"
+    run_app_release all --dry-run --publish
+    expect_failure_containing "no release notes at ${test_project:A}/Changelogs/v1.2.3.md"
+    expect_output_not_containing "==> archive"
+}
+
+test_an_empty_notes_file_counts_as_missing() {
+    make_publishing_project "release_notes_path='Changelogs/{tag}.md'"
+    mkdir -p "$test_project/Changelogs"
+    : > "$test_project/Changelogs/v1.2.3.md"
+    commit_all "Add empty release notes"
+    run_app_release all --dry-run --publish
+    expect_failure_containing "no release notes at ${test_project:A}/Changelogs/v1.2.3.md"
+}
+
+test_publishing_a_continued_run_checks_the_notes_before_any_work() {
+    make_publishing_project "release_notes_path='Changelogs/{tag}.md'"
+    run_app_release target --to archive
+    expect_success
+    run_app_release all --from archive --dry-run --publish
+    expect_failure_containing "no release notes at ${test_project:A}/Changelogs/v1.2.3.md"
+    expect_output_not_containing "==> archive"
+}
+
+test_notes_from_the_compose_hook_are_settled_before_the_tag_is_pushed() {
+    make_publishing_project "release_notes_path='Changelogs/{tag}.md'" \
+        'release_compose_notes() { print -r -- "Fixes." > "$1"; }'
+    run_app_release all --dry-run --publish
+    expect_success
+    expect_output_containing_in_order "would call the hook release_compose_notes" "push origin refs/tags/v1.2.3"
+}
+
+test_an_existing_release_needs_no_notes_file() {
+    make_publishing_project "release_notes_path='Changelogs/{tag}.md'"
+    export FAKE_GITHUB_RELEASE_EXISTS=1
+    run_app_release all --dry-run --publish
+    expect_success
+    expect_output_containing "gh release upload v1.2.3"
 }
 
 test_an_unknown_notes_fallback_is_refused() {

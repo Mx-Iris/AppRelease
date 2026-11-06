@@ -173,6 +173,10 @@ _app_release_main() {
         stage=${_app_release_stages[index]}
         if (( index == _app_release_first_index )) && [[ $stage != target ]]; then
             _app_release_resume_run "$stage"
+            # target's publishing checks did not run in this invocation; they still come before any work.
+            if [[ $_app_release_publishes == true ]]; then
+                _app_release_preflight_publish
+            fi
         fi
         _app_release_prepare_credentials_for "$stage"
         if [[ $stage != target ]]; then

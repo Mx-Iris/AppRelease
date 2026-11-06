@@ -1,9 +1,13 @@
 # --publish: the outward-facing part, in a fixed order so that an app reading the new appcast always
 # finds the download already there: tag, GitHub Release, appcast, and finally the project's deploy hook.
+# What can still fail without reaching outside, such as missing release notes, is settled before the tag.
 
 _app_release_publish() {
     local application_archive_name=$1
     app_release_log "publish: $app_release_tag"
+    if (( ${release_publishers[(Ie)github-release]} )); then
+        _app_release_prepare_github_release
+    fi
     _app_release_publish_tag
     if (( ${release_publishers[(Ie)github-release]} )); then
         _app_release_publish_github_release

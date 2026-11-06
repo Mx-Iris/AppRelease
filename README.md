@@ -69,7 +69,7 @@ app-release product --publish   # tag, GitHub Release, appcast
 | `release_version_tag_match` | `exact` | `base` lets a tag add a prerelease suffix to a numeric version |
 | `release_product_name` | `{name}-{version}-{build}.zip` | Placeholders `{name}` `{version}` `{build}` `{tag}` |
 | `release_publishers` | none | `github-release`, `sparkle-appcast` |
-| `release_notes_path` | none | Release notes file, with placeholders, for the GitHub Release |
+| `release_notes_path` | none | Release notes file, with placeholders, for the GitHub Release. Unless the fallback or `release_compose_notes` provides the notes, a missing or empty file stops the release in `target` (since 1.1.1) |
 | `release_notes_fallback` | `none` | `generated`: when there is no notes file, GitHub writes the notes from the history (since 1.1.0) |
 | `release_appcast_path` | none | Required with `sparkle-appcast` |
 | `release_appcast_arguments` | none | Extra `generate_appcast` arguments |
@@ -92,7 +92,7 @@ command fails the hook and stops the release.
 | `release_verify_archive` | after the archive checks | the `.xcarchive` |
 | `release_verify_export` | after the signature checks | the exported `.app` |
 | `release_after_product` | after the zip is made | the `Products` directory |
-| `release_compose_notes` | before publishing, when the notes file is missing | the path to write |
+| `release_compose_notes` | before the tag is pushed, when the notes file is missing or empty | the path to write |
 | `release_deploy_appcast` | after `generate_appcast` | the appcast |
 
 Hooks may use `app_release_xcodebuild <log name> <arguments...>` (the engine's own way into

@@ -41,6 +41,12 @@ expect_output_not_containing() {
     [[ $test_output != *"$1"* ]] || fail_test "expected the output not to contain '$1'. Output:"$'\n'"$test_output"
 }
 
+# Both texts appear, the first one before the second.
+expect_output_containing_in_order() {
+    [[ $test_output == *"$1"*"$2"* ]] ||
+        fail_test "expected '$1' and then '$2' in the output. Output:"$'\n'"$test_output"
+}
+
 # A throwaway git repository holding the sample app, its Release.zsh and a build/ ignore rule.
 make_project() {
     local temporary_directory
