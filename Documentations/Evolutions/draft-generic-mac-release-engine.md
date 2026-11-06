@@ -497,6 +497,7 @@ jobs:
 5. **迁移 FinderSidebarIconFix**（本机，第二批）：arm64e 切片与 launchd plist 检查放进钩子，`release_publishers=(github-release)`，产物名保持 `FinderSidebarIconFix-macOS.zip`。
    验收同步骤 3；删除 `ArchiveScript.sh`，更新文档。
    进度：完成，在 FinderSidebarIconFix 的 `feature/adopt-app-release` 上，已推送，并在本地快进合进 main，未推送。项目钉 1.1.0：迁移中发现它要 GitHub 自动生成的发布说明，引擎为此加了 `release_notes_fallback`。装好的启动器从 GitHub 拉下 1.1.0 跑通五段：两个钩子通过（daemon 与 payload 带 arm64e，launchd 服务是 Release 版），公证 Accepted，Gatekeeper 认作 Notarized Developer ID，zip 解开复检通过。与旧脚本 2026-10-12 发出的已公证产物比对：文件清单、三个二进制的架构、签名、entitlements、launchd plist 一致，Info.plist 只差工具链字段。
+   另：姊妹项目 DockIconOverride 也照此迁完（不在最初的五个项目里），见决策日志。
 6. **迁移 StarLight**（CI，第三批里最简单的一个）：`release.yml` 换成引擎片段，映射 secrets，产物名保持 `StarLight-{tag}.zip`。
    验收：手动触发、不带 `--publish` 跑通且产物过 `spctl`；下一个正式版本走 `--publish`。删除 `scripts/release.sh`，更新 `Documentations/ReleaseCI.md`。
    进度：StarLight 的 `feature/adopt-app-release` 已推送（钉 1.1.1）。本机用 GitHub 上的 1.1.1 演练 `all --dry-run --version-tag v1.7 --publish` 通过：版本 1.7、tag `v1.7`、产物名 `StarLight-v1.7.zip`、发布说明取 `ReleaseNotes/v1.7.md`，证书与公证凭据的预检通过。CI 试跑暂缓：仓库的 secrets 要重新找来配，配好后再试跑；在那之前功能分支不合进 main。
@@ -575,4 +576,5 @@ jobs:
 | 2026-11-06 | StarLight 归档加 `-skipMacroValidation -skipPackagePluginValidation` | 包里用到宏，全新的 CI runner 没有信任记录，xcodebuild 会拒绝使用；旧脚本没加这两个参数，也从没在 CI 上跑过。 |
 | 2026-11-06 | 后续项：读 build settings 时 xcodebuild 可能改写已跟踪的 `Package.resolved`，演练结尾却说什么都没改 | StarLight 的本机演练中，这台 Mac 上 GitHubServices、CocoaCoordinator 的本地检出和 workspace 里的 swift-syntax 垫片顶替了远程版本，`Components/Package.resolved` 被改写。改写来自 Xcode 解析 package，不是引擎的动作，CI 上无害；打算让 `target` 读完 build settings 后比对 `git status`、有变化就提示，留到下次改引擎。这次的改动已还原。 |
 | 2026-11-06 | RuntimeViewer 暂缓迁移；复杂的项目往后放，先拿小 App 试 | 用户认为 RuntimeViewer 的发版内容太复杂（SourceEditor framework、Catalyst helper、iOS 模拟器载荷、appcast 的提交或开 PR），先保留它的 `ArchiveScript.sh`，先在小 App 上把引擎用熟。LyricsX 也不算小，排在小 App 之后。 |
+| 2026-11-06 | 小 App 先迁 DockIconOverride，已完成 | 用户选它试水：旧脚本与 FinderSidebarIconFix 的几乎逐字相同，`Release.zsh` 照搬、只改名字，钉 1.1.1。启动器从 GitHub 拉下 1.1.1 在本机跑完五段，公证 Accepted；与 2026-10-12 用同一份代码出的公证包比对，只差 Info.plist 的工具链字段。功能分支已推送，在本地快进合进 main，未推送。归档期间改了同一 worktree 里的两份文档，引擎照设计提示「归档时已跟踪的文件有变动」；两份文档不进 App，产物不受影响，以后真跑期间不改那个 worktree。 |
 | 2026-11-06 | StarLight 的 CI 试跑暂缓，功能分支先不合进 main | 仓库要用的证书和 API key 得重新找，用户决定先跳过需要 secrets 的验收。没在 CI 上跑通过的发版流程先不合，免得被当成已完成推上去；配好 secrets、试跑通过后再合。 |
