@@ -507,6 +507,7 @@ jobs:
    - `release_deploy_appcast` 搬入现有的「提交或开 PR」逻辑。
    - `--update-packages`、`--local-deps` 经 `--` 交给钩子；产物名保持 `RuntimeViewer-macOS.zip`。
    验收：手动触发的演练（不发布）通过，生成的 appcast 条目与旧脚本的格式一致。删除 `ArchiveScript.sh`，更新文档。
+   进度：暂缓。RuntimeViewer 的发版内容太复杂，先在小 App 上把引擎用熟，见决策日志。
 8. **迁移 LyricsX**：
    - Info.plist 改用 build settings（见「下游影响」）。
    - `release_version_tag_match=base`、`release_build_number_source=semantic-version-encoding`、`release_export_options_path=ExportOptions.plist`。
@@ -573,4 +574,5 @@ jobs:
 | 2026-11-06 | StarLight 的 workflow：手动运行不填 tag 时只构建、公证所选分支，不发布；失败时把运行目录的 `logs/` 传成 artifact | 落地步骤要求「手动触发、不带 `--publish` 跑通」，而旧 workflow 的手动运行必须给已有的 tag，并且一定发布；填 tag 的手动运行保留原来的重跑用途。终端只显示失败摘要，CI 的 runner 用完即弃，日志不传出来就没了。runner 从 `macos-latest` 改为钉 `macos-26`。 |
 | 2026-11-06 | StarLight 归档加 `-skipMacroValidation -skipPackagePluginValidation` | 包里用到宏，全新的 CI runner 没有信任记录，xcodebuild 会拒绝使用；旧脚本没加这两个参数，也从没在 CI 上跑过。 |
 | 2026-11-06 | 后续项：读 build settings 时 xcodebuild 可能改写已跟踪的 `Package.resolved`，演练结尾却说什么都没改 | StarLight 的本机演练中，这台 Mac 上 GitHubServices、CocoaCoordinator 的本地检出和 workspace 里的 swift-syntax 垫片顶替了远程版本，`Components/Package.resolved` 被改写。改写来自 Xcode 解析 package，不是引擎的动作，CI 上无害；打算让 `target` 读完 build settings 后比对 `git status`、有变化就提示，留到下次改引擎。这次的改动已还原。 |
+| 2026-11-06 | RuntimeViewer 暂缓迁移；复杂的项目往后放，先拿小 App 试 | 用户认为 RuntimeViewer 的发版内容太复杂（SourceEditor framework、Catalyst helper、iOS 模拟器载荷、appcast 的提交或开 PR），先保留它的 `ArchiveScript.sh`，先在小 App 上把引擎用熟。LyricsX 也不算小，排在小 App 之后。 |
 | 2026-11-06 | StarLight 的 CI 试跑暂缓，功能分支先不合进 main | 仓库要用的证书和 API key 得重新找，用户决定先跳过需要 secrets 的验收。没在 CI 上跑通过的发版流程先不合，免得被当成已完成推上去；配好 secrets、试跑通过后再合。 |
