@@ -499,7 +499,7 @@ jobs:
    进度：完成，在 FinderSidebarIconFix 的 `feature/adopt-app-release` 上，已推送，并在本地快进合进 main，未推送。项目钉 1.1.0：迁移中发现它要 GitHub 自动生成的发布说明，引擎为此加了 `release_notes_fallback`。装好的启动器从 GitHub 拉下 1.1.0 跑通五段：两个钩子通过（daemon 与 payload 带 arm64e，launchd 服务是 Release 版），公证 Accepted，Gatekeeper 认作 Notarized Developer ID，zip 解开复检通过。与旧脚本 2026-10-12 发出的已公证产物比对：文件清单、三个二进制的架构、签名、entitlements、launchd plist 一致，Info.plist 只差工具链字段。
 6. **迁移 StarLight**（CI，第三批里最简单的一个）：`release.yml` 换成引擎片段，映射 secrets，产物名保持 `StarLight-{tag}.zip`。
    验收：手动触发、不带 `--publish` 跑通且产物过 `spctl`；下一个正式版本走 `--publish`。删除 `scripts/release.sh`，更新 `Documentations/ReleaseCI.md`。
-   进度：StarLight 的 `feature/adopt-app-release` 已推送（钉 1.1.1）。本机用 GitHub 上的 1.1.1 演练 `all --dry-run --version-tag v1.7 --publish` 通过：版本 1.7、tag `v1.7`、产物名 `StarLight-v1.7.zip`、发布说明取 `ReleaseNotes/v1.7.md`，证书与公证凭据的预检通过。等仓库配好 secrets 后在 CI 上试跑。
+   进度：StarLight 的 `feature/adopt-app-release` 已推送（钉 1.1.1）。本机用 GitHub 上的 1.1.1 演练 `all --dry-run --version-tag v1.7 --publish` 通过：版本 1.7、tag `v1.7`、产物名 `StarLight-v1.7.zip`、发布说明取 `ReleaseNotes/v1.7.md`，证书与公证凭据的预检通过。CI 试跑暂缓：仓库的 secrets 要重新找来配，配好后再试跑；在那之前功能分支不合进 main。
 7. **迁移 RuntimeViewer**（next 分支）：
    - `release_before_archive` 跑 `FetchSourceEditorScript.sh`，用 `app_release_xcodebuild` 归档并导出 Catalyst helper，构建 iOS Simulator 载荷。
    - `release_verify_export` 校验图标、SourceEditor framework、模拟器载荷。
@@ -573,3 +573,4 @@ jobs:
 | 2026-11-06 | StarLight 的 workflow：手动运行不填 tag 时只构建、公证所选分支，不发布；失败时把运行目录的 `logs/` 传成 artifact | 落地步骤要求「手动触发、不带 `--publish` 跑通」，而旧 workflow 的手动运行必须给已有的 tag，并且一定发布；填 tag 的手动运行保留原来的重跑用途。终端只显示失败摘要，CI 的 runner 用完即弃，日志不传出来就没了。runner 从 `macos-latest` 改为钉 `macos-26`。 |
 | 2026-11-06 | StarLight 归档加 `-skipMacroValidation -skipPackagePluginValidation` | 包里用到宏，全新的 CI runner 没有信任记录，xcodebuild 会拒绝使用；旧脚本没加这两个参数，也从没在 CI 上跑过。 |
 | 2026-11-06 | 后续项：读 build settings 时 xcodebuild 可能改写已跟踪的 `Package.resolved`，演练结尾却说什么都没改 | StarLight 的本机演练中，这台 Mac 上 GitHubServices、CocoaCoordinator 的本地检出和 workspace 里的 swift-syntax 垫片顶替了远程版本，`Components/Package.resolved` 被改写。改写来自 Xcode 解析 package，不是引擎的动作，CI 上无害；打算让 `target` 读完 build settings 后比对 `git status`、有变化就提示，留到下次改引擎。这次的改动已还原。 |
+| 2026-11-06 | StarLight 的 CI 试跑暂缓，功能分支先不合进 main | 仓库要用的证书和 API key 得重新找，用户决定先跳过需要 secrets 的验收。没在 CI 上跑通过的发版流程先不合，免得被当成已完成推上去；配好 secrets、试跑通过后再合。 |
