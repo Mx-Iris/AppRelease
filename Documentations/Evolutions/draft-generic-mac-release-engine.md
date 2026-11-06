@@ -3,10 +3,10 @@
 - **状态**: In Progress
 - **作者**: JH
 - **创建日期**: 2026-11-05
-- **最后更新**: 2026-11-05
+- **最后更新**: 2026-11-06
 - **所属愿景**: 无
-- **关联提案**: XCOrganizer《一条命令编出公证过的 XCOrganizer》（`Documentations/Evolutions/draft-build-notarized-app.md`，In Progress，迁移后由本提案取代）；InjectionScaffold《0004 - 模板带上归档脚本》（Draft，脚手架接入引擎时改写）
-- **实现分支 / PR**: `feature/generic-mac-release-engine`（仓库还没有 GitHub 远端，建好之前只在本地）
+- **关联提案**: XCOrganizer《一条命令编出公证过的 XCOrganizer》（`Documentations/Evolutions/draft-build-notarized-app.md`，已 Withdrawn，由本提案取代）；InjectionScaffold《0004 - 模板带上归档脚本》（Draft，脚手架接入引擎时改写）
+- **实现分支 / PR**: `feature/generic-mac-release-engine`
 - **配套文档**: 待定 —— 落地时登记使用指南 `Documentations/Guides/ReleaseConfiguration.md`
 
 ## 摘要
@@ -496,6 +496,7 @@ jobs:
    进度：完成。公开仓库 https://github.com/Mx-Iris/AppRelease ，引擎 CI（`macos-26-arm64`，默认 Xcode 26.6）48 个测试全部通过，tag `1.0.0` 已推送；两台 Mac 都装好了启动器（Ultra 经 ssh 克隆到同一路径后安装）。XCOrganizer 用装好的启动器、不设本地引擎目录，从 GitHub 拉下 1.0.0 跑通了 `target` 预检；它的功能分支已在本地合进 main，未推送。
 5. **迁移 FinderSidebarIconFix**（本机，第二批）：arm64e 切片与 launchd plist 检查放进钩子，`release_publishers=(github-release)`，产物名保持 `FinderSidebarIconFix-macOS.zip`。
    验收同步骤 3；删除 `ArchiveScript.sh`，更新文档。
+   进度：完成，在 FinderSidebarIconFix 的 `feature/adopt-app-release` 上，已推送，并在本地快进合进 main，未推送。项目钉 1.1.0：迁移中发现它要 GitHub 自动生成的发布说明，引擎为此加了 `release_notes_fallback`。装好的启动器从 GitHub 拉下 1.1.0 跑通五段：两个钩子通过（daemon 与 payload 带 arm64e，launchd 服务是 Release 版），公证 Accepted，Gatekeeper 认作 Notarized Developer ID，zip 解开复检通过。与旧脚本 2026-10-12 发出的已公证产物比对：文件清单、三个二进制的架构、签名、entitlements、launchd plist 一致，Info.plist 只差工具链字段。
 6. **迁移 StarLight**（CI，第三批里最简单的一个）：`release.yml` 换成引擎片段，映射 secrets，产物名保持 `StarLight-{tag}.zip`。
    验收：手动触发、不带 `--publish` 跑通且产物过 `spctl`；下一个正式版本走 `--publish`。删除 `scripts/release.sh`，更新 `Documentations/ReleaseCI.md`。
 7. **迁移 RuntimeViewer**（next 分支）：
@@ -562,3 +563,7 @@ jobs:
 | 2026-11-05 | 核实：Xcode 26 接受 `-IDEEnableNewPackagePIFBuilder=NO` | 前期调研里这一条原是推测。引擎 CI 的默认 Xcode 是 26.6，集成测试归档通用示例 App 时带着这个参数照常成功；示例没有 package，所以只证明参数本身无害。 |
 | 2026-11-05 | 引擎 1.1.0：新增 `release_notes_fallback`，新建 GitHub Release 时显式传 `--title <tag>` | 迁移 FinderSidebarIconFix 时发现它发版用 GitHub 自动生成的说明（`--generate-notes`），RuntimeViewer 在没给说明文件时也这样做，1.0.0 只会给空说明。按 API 演进策略，新增可选变量算 minor；默认值不变，已有行为不受影响。四个项目建 Release 时都把标题设为 tag，引擎照做。 |
 | 2026-11-05 | FinderSidebarIconFix 的 launchd plist 检查改为从 plist 本身推出服务名 | 旧脚本把 `Label` 与 build setting `INJECTION_SERVICE_NAME` 逐字比对；钩子在单独续跑某一段时拿不到 build settings。改为检查：`LaunchDaemons/` 下只有一个 plist、文件名就是 `<Label>.plist`、`Label` 不以 `.debug` 结尾、`MachServices` 打开了它、`BundleProgram` 指向的文件存在。当初那道检查要防的「Release 包里装的是 Debug 服务名」仍然拦得住。 |
+| 2026-11-05 | FinderSidebarIconFix 的对照改用旧脚本 2026-10-12 发出的已公证产物 | 旧脚本在本机 Xcode 27.2 上归档失败，报 `Unable to resolve module dependency: 'FinderSidebarIconFixDaemonCore'`：新的 package PIF builder 丢掉了本地包的 x86_64，正是引擎在要求 x86_64 时关掉这个 builder 要防的坑。旧脚本上一次真实发布的产物同样公证过，比对的项目不变。 |
+| 2026-11-05 | 迁移时 `.worktrees/` 先写进主检出的 `.git/info/exclude`，`.gitignore` 的改动随功能分支提交 | FinderSidebarIconFix 原先没有忽略 `.worktrees/`。直接改主检出的 `.gitignore` 会在 main 上留下未提交的改动；`.git/info/exclude` 只在本机生效、不进提交。后面几个项目遇到同样情况照此办。 |
+| 2026-11-06 | 锁屏时分两段跑：先 `--to export`，解锁后 `--from notary` | 锁屏时 `notarytool` 读不到钥匙串里的公证凭据，报 `No Keychain password item found for profile`。`target` 段的公证预检在上传前就拦下了，但报错只说凭据被拒，没提锁屏；补这条提示留到下次改引擎。这次续跑隔了一夜，也验证了跨天续跑。 |
+| 2026-11-06 | 步骤 5 完成 | FinderSidebarIconFix 用 GitHub 上的 1.1.0 公证通过、比对一致；功能分支已推送并在本地合进 main，等用户看过再推。 |
