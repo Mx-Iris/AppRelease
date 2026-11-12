@@ -85,15 +85,18 @@ _app_release_resolve_locations() {
     app_release_derived_data_path=${derived_data_path:a}
 }
 
-# Renders a file name template. Placeholders: {name} {version} {build} {tag}.
+# Renders a file name template. Placeholders: {name} {version} {build} {tag} {tag_version}.
+# {version} is the project's version; {tag_version} is the tag without its v, which differs when
+# release_version_tag_match=base lets the tag add a prerelease suffix (LyricsX: 1.9.1 and 1.9.1-beta.1).
 _app_release_render_template() {
     local rendered=$1
     rendered=${rendered//\{name\}/$app_release_application_name}
     rendered=${rendered//\{version\}/$app_release_marketing_version}
     rendered=${rendered//\{build\}/$app_release_build_number}
     rendered=${rendered//\{tag\}/$app_release_tag}
+    rendered=${rendered//\{tag_version\}/${app_release_tag#v}}
     if [[ $rendered == *\{*\}* ]]; then
-        app_release_fail "unknown placeholder in '$1' (known: {name} {version} {build} {tag})"
+        app_release_fail "unknown placeholder in '$1' (known: {name} {version} {build} {tag} {tag_version})"
     fi
     REPLY=$rendered
 }

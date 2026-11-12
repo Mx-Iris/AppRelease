@@ -67,7 +67,7 @@ app-release product --publish   # tag, GitHub Release, appcast
 | `release_notary_keychain_profile` | none | For local runs; CI uses an App Store Connect key |
 | `release_build_number_source` | `project` | `project`, `commit-count`, or `semantic-version-encoding` |
 | `release_version_tag_match` | `exact` | `base` lets a tag add a prerelease suffix to a numeric version |
-| `release_product_name` | `{name}-{version}-{build}.zip` | Placeholders `{name}` `{version}` `{build}` `{tag}` |
+| `release_product_name` | `{name}-{version}-{build}.zip` | Placeholders `{name}` `{version}` `{build}` `{tag}`, and `{tag_version}`, the tag without its `v` (since 1.2.0) |
 | `release_publishers` | none | `github-release`, `sparkle-appcast` |
 | `release_notes_path` | none | Release notes file, with placeholders, for the GitHub Release. Unless the fallback or `release_compose_notes` provides the notes, a missing or empty file stops the release in `target` (since 1.1.1) |
 | `release_notes_fallback` | `none` | `generated`: when there is no notes file, GitHub writes the notes from the history (since 1.1.0) |
@@ -98,7 +98,8 @@ command fails the hook and stops the release.
 Hooks may use `app_release_xcodebuild <log name> <arguments...>` (the engine's own way into
 `xcodebuild`), `app_release_add_product <file> [--not-notarized]`, `app_release_log`,
 `app_release_fail`, and the read-only `app_release_*` variables, such as `app_release_run_directory`,
-`app_release_marketing_version`, `app_release_build_number`, `app_release_tag`, and
+`app_release_marketing_version`, `app_release_build_number`, `app_release_tag`,
+`app_release_publishes` (`true` when the run publishes, since 1.2.0), and
 `app_release_project_arguments` (whatever follows `--` on the command line).
 
 ## Continuous integration
@@ -115,6 +116,7 @@ Hooks may use `app_release_xcodebuild <log name> <arguments...>` (the engine's o
     APP_RELEASE_NOTARY_KEY_BASE64: ${{ secrets.NOTARY_KEY_BASE64 }}
     APP_RELEASE_NOTARY_KEY_IDENTIFIER: ${{ secrets.NOTARY_KEY_IDENTIFIER }}
     APP_RELEASE_NOTARY_ISSUER_IDENTIFIER: ${{ secrets.NOTARY_ISSUER_IDENTIFIER }}
+    APP_RELEASE_SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
   run: |
     engine_version=$(sed -nE 's/^release_engine_version=([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' Release.zsh)
     git clone --quiet --depth 1 --branch "$engine_version" https://github.com/Mx-Iris/AppRelease "$RUNNER_TEMP/AppRelease"

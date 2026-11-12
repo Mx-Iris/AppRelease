@@ -96,3 +96,16 @@ test_the_product_name_template_keeps_a_project_file_name() {
     expect_success
     expect_output_containing "Products/SampleApp-macOS.zip"
 }
+
+# A project that keeps its version numeric can still name a prerelease's file after the whole tag.
+test_tag_version_names_a_prerelease_of_a_numeric_project_version() {
+    make_project
+    configure_release release_notary_keychain_profile=SampleProfile release_version_tag_match=base \
+        "release_product_name='{name}_{tag_version}_{version}.zip'"
+    use_fake_build_settings
+    export FAKE_SECURITY_IDENTITY="Developer ID Application: Sample Developer (TEAMID1234)"
+    export FAKE_NOTARY_ACCEPTS_CREDENTIALS=1
+    run_app_release all --dry-run --version-tag v1.2.3-beta.1
+    expect_success
+    expect_output_containing "Products/SampleApp_1.2.3-beta.1_1.2.3.zip"
+}

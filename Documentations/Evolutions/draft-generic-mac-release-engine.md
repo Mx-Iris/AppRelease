@@ -3,7 +3,7 @@
 - **状态**: In Progress
 - **作者**: JH
 - **创建日期**: 2026-11-05
-- **最后更新**: 2026-11-06
+- **最后更新**: 2026-11-12
 - **所属愿景**: 无
 - **关联提案**: XCOrganizer《一条命令编出公证过的 XCOrganizer》（`Documentations/Evolutions/draft-build-notarized-app.md`，已 Withdrawn，由本提案取代）；InjectionScaffold《0004 - 模板带上归档脚本》（Draft，脚手架接入引擎时改写）
 - **实现分支 / PR**: `feature/generic-mac-release-engine`
@@ -221,7 +221,7 @@ release_verify_export() {
 | `release_notary_keychain_profile` | 无 | 本机公证用；CI 用 API key 的环境变量 |
 | `release_build_number_source` | `project` | `project`、`commit-count`、`semantic-version-encoding`，见「版本号」 |
 | `release_version_tag_match` | `exact` | `exact`：tag 去掉 `v` 后与版本号完全一致；`base`：tag 可以多一个预发布后缀 |
-| `release_product_name` | `{name}-{version}-{build}.zip` | 占位符有 `{name}`（App 名）、`{version}`、`{build}`、`{tag}` |
+| `release_product_name` | `{name}-{version}-{build}.zip` | 占位符有 `{name}`（App 名）、`{version}`、`{build}`、`{tag}`，以及 1.2.0 起的 `{tag_version}`（去掉 `v` 的 tag） |
 | `release_publishers` | 空 | 可选 `github-release`、`sparkle-appcast` |
 | `release_notes_path` | 无 | 发布说明文件，可用占位符，例如 `Changelogs/{tag}.md`；用作 GitHub Release 正文 |
 | `release_notes_fallback` | `none` | `generated`：没有说明文件时，用 GitHub 按提交历史生成的说明（1.1.0 起） |
@@ -512,6 +512,7 @@ jobs:
    - `release_archive_arguments=(-skipMacroValidation -skipPackagePluginValidation OTHER_CODE_SIGN_FLAGS=--timestamp)`。
    - 3 个描述文件经 `APP_RELEASE_PROVISIONING_PROFILE_*_BASE64` 传入；`release_deploy_appcast` 负责 canonical 提交与 Pages 镜像；`release_after_product` 登记 dSYM 压缩包；YAML 里保留 Metal toolchain 那一步。
    验收：同一个版本用新旧两种方式各生成一次 appcast 条目，逐字段比对（`sparkle:version`、`shortVersionString`、`minimumSystemVersion`、channel、length，签名能用公钥验证）；演练通过。删除整个 `Scripts/release/`（含 `update-appcast.py`）。
+   进度：实现在 LyricsX 的 `feature/adopt-app-release` 上，钉引擎 1.2.0（为它加了 `{tag_version}` 与 `app_release_publishes`）。与上面的做法有两处不同，原因见决策日志：appcast 不由 `generate_appcast` 直接合并进线上更新源，而是由 `update-appcast.py` 改写成的 `Scripts/insert-appcast-item.py` 把生成的条目插进两个更新源，所以它没有删；Helper 的 `CFBundleVersion` 保留字面值。验收的逐字段比对要等第一次真正发布，CI 只构建的那次运行不生成 appcast。
 9. **收尾**：提案改 Implemented 并分配编号，写使用指南，判断术语表。
 
 **收尾时必须判断两件事**（判断结果写进决策日志，不允许沉默跳过）：
@@ -571,3 +572,6 @@ jobs:
 | 2026-11-06 | StarLight 的发版 workflow 从没运行过，仓库也没有 secrets；用户补上 secrets，仍在 CI 上试跑 | 前期调研把 StarLight 记成「在 CI 发版」，其实 workflow 是 2026-06-28 加的，一次都没跑过，v1.4 及更早的版本都发在它之前。引擎的 CI 凭据模式还没真跑过，先在最简单的项目上验证。否决「先在本机验、CI 留到 RuntimeViewer」和「StarLight 不走 CI」。 |
 | 2026-11-06 | StarLight 的 workflow：手动运行不填 tag 时只构建、公证所选分支，不发布；失败时把运行目录的 `logs/` 传成 artifact | 落地步骤要求「手动触发、不带 `--publish` 跑通」，而旧 workflow 的手动运行必须给已有的 tag，并且一定发布；填 tag 的手动运行保留原来的重跑用途。终端只显示失败摘要，CI 的 runner 用完即弃，日志不传出来就没了。runner 从 `macos-latest` 改为钉 `macos-26`。 |
 | 2026-11-06 | StarLight 归档加 `-skipMacroValidation -skipPackagePluginValidation` | 包里用到宏，全新的 CI runner 没有信任记录，xcodebuild 会拒绝使用；旧脚本没加这两个参数，也从没在 CI 上跑过。 |
+| 2026-11-12 | 引擎 1.2.0：新增占位符 `{tag_version}` 与只读变量 `app_release_publishes` | 迁移 LyricsX 时发现：工程版本不带后缀，`{version}` 给预发布出的是 `LyricsX_1.9.1+….zip`，而现有文件名带后缀（`LyricsX_1.9.1-beta.1+….zip`），用户决定保持原名；`{tag_version}` 是去掉 `v` 的 tag。LyricsX 的发布说明由 `release_compose_notes` 拼成，引擎只知道钩子会提供说明，查不到两份源文件缺没缺，`release_preflight` 要靠 `app_release_publishes` 只在发布时检查。两者都是新增，按演进策略算 minor。README 的 CI 示例顺带补上 `APP_RELEASE_SPARKLE_PRIVATE_KEY`。 |
+| 2026-11-12 | LyricsX 的 appcast：`generate_appcast` 写进一份只有这一版的临时 feed，钩子把条目插进两个线上更新源 | LyricsX 有两个线上更新源（1.9.0 起读组织站点，1.8.x 读仓库 `master`），最早的几个条目彼此不同，`generate_appcast` 合并时会改写读到的每个条目。插入时标题与 `shortVersionString` 用完整 tag 版本（与已发布的条目一致），说明用英文发布说明转成的 HTML。实测 Sparkle 2.9.3 的 `generate_appcast`：私钥与 App 的 `SUPublicEDKey` 不符时只打警告、退出码为 0，条目里没有 `sparkle:edSignature`；插入脚本见到无签名的条目就失败，两个更新源都不会被改。同一版本重跑会打出新 zip，所以已有的条目整条替换，而不是只刷新说明。 |
+| 2026-11-12 | LyricsX 的 Helper 保留 `CFBundleVersion` 字面值 `11`，只把 `CFBundleShortVersionString` 改成 `$(MARKETING_VERSION)` | 旧流程从没改过 Helper 的 build 号，也没有任何东西比较它；改成编码值的影响没有核实，不在这次迁移里冒险。 |

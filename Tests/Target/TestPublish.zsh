@@ -98,3 +98,15 @@ test_an_unknown_notes_fallback_is_refused() {
     run_app_release all --dry-run --publish
     expect_failure_containing "release_notes_fallback must be none or generated"
 }
+
+# A hook that checks only what a release needs, such as notes that are composed later, has to know
+# whether the run publishes.
+test_hooks_can_tell_whether_the_run_publishes() {
+    make_publishing_project \
+        'release_preflight() { print -r -- "$app_release_publishes" >> "${app_release_project_directory:h}/publishes"; }'
+    run_app_release target --publish
+    expect_success
+    run_app_release target
+    expect_success
+    expect_equal $'true\nfalse' "$(<${test_project:A:h}/publishes)" "app_release_publishes seen by release_preflight"
+}

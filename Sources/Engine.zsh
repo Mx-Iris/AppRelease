@@ -28,6 +28,8 @@ typeset -g _app_release_version_tag_option= _app_release_derived_data_option=
 typeset -g _app_release_is_dry_run=false _app_release_allows_dirty=false
 typeset -g _app_release_publishes=false _app_release_skips_notarization=false
 typeset -ga app_release_project_arguments=()
+# Whether this run publishes (--publish), for hooks that check only what a release needs.
+typeset -g app_release_publishes=false
 
 _app_release_print_usage() {
     print -r -- "AppRelease $app_release_engine_version
@@ -149,6 +151,7 @@ _app_release_print_outcome() {
 
 _app_release_main() {
     _app_release_parse_arguments "$@"
+    app_release_publishes=$_app_release_publishes
     case $_app_release_command in
         (help)
             _app_release_print_usage
