@@ -73,6 +73,7 @@ app-release product --publish   # tag, GitHub Release, appcast
 | `release_notes_fallback` | `none` | `generated`: when there is no notes file, GitHub writes the notes from the history (since 1.1.0) |
 | `release_appcast_path` | none | Required with `sparkle-appcast` |
 | `release_appcast_arguments` | none | Extra `generate_appcast` arguments |
+| `release_appcast_embeds_release_notes` | `false` | `true`: the appcast item carries the GitHub Release's notes file as its description, which Sparkle's update window shows; needs `release_notes_path` (since 1.3.0) |
 
 The version comes from the project: `MARKETING_VERSION`, or the Info.plist's own value. A
 `--version-tag` must match it. `commit-count` and `semantic-version-encoding` pass
@@ -96,7 +97,10 @@ command fails the hook and stops the release.
 | `release_deploy_appcast` | after `generate_appcast` | the appcast |
 
 Hooks may use `app_release_xcodebuild <log name> <arguments...>` (the engine's own way into
-`xcodebuild`), `app_release_add_product <file> [--not-notarized]`, `app_release_log`,
+`xcodebuild`), `app_release_add_product <file> [--not-notarized]`,
+`app_release_generate_appcast <archive> <appcast> [<release notes>]` (since 1.3.0: the feed of a second app
+the release ships, such as one zipped inside the first, written as `sparkle-appcast` writes the app's, from
+`release_deploy_appcast`; the archive must be one of the release's assets), `app_release_log`,
 `app_release_fail`, and the read-only `app_release_*` variables, such as `app_release_run_directory`,
 `app_release_marketing_version`, `app_release_build_number`, `app_release_tag`,
 `app_release_publishes` (`true` when the run publishes, since 1.2.0), and

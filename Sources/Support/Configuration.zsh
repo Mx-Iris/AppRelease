@@ -19,6 +19,7 @@ typeset -g release_notes_path=
 typeset -g release_notes_fallback=none
 typeset -g release_appcast_path=
 typeset -ga release_appcast_arguments=()
+typeset -g release_appcast_embeds_release_notes=false
 
 # Where this run's files go; set by _app_release_resolve_locations.
 typeset -g _app_release_output_root= _app_release_scheme_directory=
@@ -75,6 +76,14 @@ _app_release_load_configuration() {
     if (( ${release_publishers[(Ie)sparkle-appcast]} )); then
         (( ${release_publishers[(Ie)github-release]} )) || app_release_fail "sparkle-appcast needs github-release in release_publishers: the appcast points at the GitHub Release's downloads"
         [[ -n $release_appcast_path ]] || app_release_fail "sparkle-appcast needs release_appcast_path"
+    fi
+    case $release_appcast_embeds_release_notes in
+        (true|false) ;;
+        (*) app_release_fail "release_appcast_embeds_release_notes must be true or false, not '$release_appcast_embeds_release_notes'" ;;
+    esac
+    if [[ $release_appcast_embeds_release_notes == true ]]; then
+        [[ -n $release_notes_path ]] ||
+            app_release_fail "release_appcast_embeds_release_notes needs release_notes_path: the appcast embeds the GitHub Release's notes file"
     fi
 }
 

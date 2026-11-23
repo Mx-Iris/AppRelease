@@ -1,0 +1,23 @@
+#!/bin/zsh -f
+# Fake generate_appcast for the tests: writes its arguments, one per line, and then the names of the
+# files in the archives directory it was given, to FAKE_GENERATE_APPCAST_RECORD_PATH, and an empty feed
+# where -o points. Without the record path it fails, so a passing test also shows it was expected.
+if [[ -z ${FAKE_GENERATE_APPCAST_RECORD_PATH:-} ]]; then
+    print -u2 -r -- "fake generate_appcast: FAKE_GENERATE_APPCAST_RECORD_PATH is not set"
+    exit 70
+fi
+archives_directory=$1
+output_path=
+for (( index = 1; index <= $#; index++ )); do
+    if [[ ${argv[index]} == -o ]]; then
+        output_path=${argv[index + 1]}
+    fi
+done
+{
+    print -rl -- "$@"
+    print -r -- "--- files"
+    print -rl -- "$archives_directory"/*(N:t)
+} >> "$FAKE_GENERATE_APPCAST_RECORD_PATH"
+if [[ -n $output_path ]]; then
+    print -r -- '<rss/>' > "$output_path"
+fi

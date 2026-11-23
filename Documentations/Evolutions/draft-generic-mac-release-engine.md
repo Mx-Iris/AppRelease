@@ -3,7 +3,7 @@
 - **状态**: In Progress
 - **作者**: JH
 - **创建日期**: 2026-11-05
-- **最后更新**: 2026-11-14
+- **最后更新**: 2026-11-23
 - **所属愿景**: 无
 - **关联提案**: XCOrganizer《一条命令编出公证过的 XCOrganizer》（`Documentations/Evolutions/draft-build-notarized-app.md`，已 Withdrawn，由本提案取代）；InjectionScaffold《0004 - 模板带上归档脚本》（Draft，脚手架接入引擎时改写）
 - **实现分支 / PR**: `feature/generic-mac-release-engine`
@@ -227,6 +227,7 @@ release_verify_export() {
 | `release_notes_fallback` | `none` | `generated`：没有说明文件时，用 GitHub 按提交历史生成的说明（1.1.0 起） |
 | `release_appcast_path` | 无 | 列了 `sparkle-appcast` 时必填 |
 | `release_appcast_arguments` | 空 | 追加给 `generate_appcast` 的参数，例如 RuntimeViewer 的 `--release-notes-url-prefix` |
+| `release_appcast_embeds_release_notes` | `false` | 1.3.0 起：`true` 时把 GitHub Release 的发布说明文件嵌进 appcast 条目，Sparkle 的更新窗口显示它；要同时设 `release_notes_path` |
 
 **钩子**（都可选，定义了才调用；返回非零即视为验收失败）
 
@@ -247,6 +248,7 @@ release_verify_export() {
 | `app_release_xcodebuild <日志名> <参数…>` | 与引擎自己的 xcodebuild 调用走同一个入口（见下文） |
 | `app_release_log <消息>` / `app_release_fail <消息>` | 统一输出；`fail` 以非零状态退出 |
 | `app_release_add_product <路径> [--not-notarized]` | 登记额外产物：写进 `SHA256SUMS`、随 GitHub Release 上传；`--not-notarized` 表示跳过 Gatekeeper 检查 |
+| `app_release_generate_appcast <压缩包> <appcast> [<发布说明>]` | 1.3.0 起：照 `sparkle-appcast` 的做法（同一把 EdDSA 私钥、这次 Release 的下载地址、预发布版的 beta 频道、`release_appcast_arguments`）给另一个 App 的压缩包写 appcast 条目，供 `release_deploy_appcast` 给随发布一起发的第二个 App 生成更新源；压缩包必须是这次 Release 的附件 |
 | `app_release_project_directory`、`app_release_run_directory`、`app_release_derived_data_path` | 位置 |
 | `app_release_marketing_version`、`app_release_build_number`、`app_release_tag`、`app_release_is_prerelease` | 版本信息 |
 | `app_release_project_arguments` | 命令行 `--` 之后的参数（数组），给项目自定义开关用，例如 RuntimeViewer 的 `--local-deps` |
@@ -576,3 +578,4 @@ jobs:
 | 2026-11-12 | LyricsX 的 appcast：`generate_appcast` 写进一份只有这一版的临时 feed，钩子把条目插进两个线上更新源 | LyricsX 有两个线上更新源（1.9.0 起读组织站点，1.8.x 读仓库 `master`），最早的几个条目彼此不同，`generate_appcast` 合并时会改写读到的每个条目。插入时标题与 `shortVersionString` 用完整 tag 版本（与已发布的条目一致），说明用英文发布说明转成的 HTML。实测 Sparkle 2.9.3 的 `generate_appcast`：私钥与 App 的 `SUPublicEDKey` 不符时只打警告、退出码为 0，条目里没有 `sparkle:edSignature`；插入脚本见到无签名的条目就失败，两个更新源都不会被改。同一版本重跑会打出新 zip，所以已有的条目整条替换，而不是只刷新说明。 |
 | 2026-11-12 | LyricsX 的 Helper 保留 `CFBundleVersion` 字面值 `11`，只把 `CFBundleShortVersionString` 改成 `$(MARKETING_VERSION)` | 旧流程从没改过 Helper 的 build 号，也没有任何东西比较它；改成编码值的影响没有核实，不在这次迁移里冒险。 |
 | 2026-11-14 | 步骤 8 完成，LyricsX 1.9.1 用引擎 1.2.0 正式发布 | 逐字段比对改为对照旧流程发的 1.9.0 条目：旧脚本已随迁移删除，生成不了同一版本的条目，而 1.9.0 是旧流程最后发出、用户已经正常升级到的一版。tag 推送后的前两次运行都因 GitHub macOS arm64 runner 容量不足、没分到机器被取消，一步没跑；重跑那次的 tag 与提交都没动。 |
+| 2026-11-23 | 引擎 1.3.0：新增变量 `release_appcast_embeds_release_notes` 与公开函数 `app_release_generate_appcast` | LaunchpadAwakener 接 Sparkle 时提出：它要让 Sparkle 的更新窗口显示发布说明，还要给压在 App 资源里的独立版另生成一个更新源。`sparkle-appcast` 发布器原先只把 zip 放进暂存目录，发布说明进不了 appcast；钩子也拿不到引擎找到的 `generate_appcast` 与私钥文件。现在发布器与新函数共用一段代码：每个压缩包一个暂存目录，发布说明以「压缩包同名 + 原扩展名」放在旁边（`.md`、`.html`、`.txt` 之外的按 Markdown 算），加 `--embed-release-notes`。嵌入发布说明默认关：打开它会改变已有项目的 appcast 输出，按演进策略那是破坏性变更，做成可选变量才算 minor。用户批准改引擎并发 1.3.0。新加 7 个测试，6 个在旧代码上失败（默认不嵌入那条本来就成立）；预演模式不调用钩子，所以新函数经非预演 `target` 里的 `release_preflight` 测，配一个记录参数与暂存文件的假 `generate_appcast`。全部 65 个测试通过，没有跑集成测试（只归档样例 App，不涉及发布）。 |
